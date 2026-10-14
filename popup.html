@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Playlist Focus</title>
+  <style>
+    :root {
+      --yt-red: #ff0000;
+      --yt-bg: #0f0f0f;
+      --yt-surface: #212121;
+      --yt-surface-hover: #272727;
+      --yt-text-primary: #f1f1f1;
+      --yt-text-secondary: #aaaaaa;
+      --yt-border: #303030;
+      --yt-blue: #3ea6ff;
+      --yt-success: #2ba640;
+    }
+
+    body {
+      width: 420px;
+      max-height: 600px;
+      margin: 0;
+      padding: 16px;
+      font-family: 'Roboto', 'YouTube Sans', Arial, sans-serif;
+      background-color: var(--yt-bg);
+      color: var(--yt-text-primary);
+      box-sizing: border-box;
+      overflow-y: auto;
+      user-select: none;
+    }
+
+    /* Scrollbar */
+    body::-webkit-scrollbar {
+      width: 8px;
+    }
+    body::-webkit-scrollbar-track {
+      background: var(--yt-bg);
+    }
+    body::-webkit-scrollbar-thumb {
+      background: var(--yt-border);
+      border-radius: 4px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--yt-border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--yt-red);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--yt-text-primary);
+      margin: 0;
+    }
+
+    /* Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #555;
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--yt-blue);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+
+    /* Status Banner */
+    .status-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      margin-top: 12px;
+      background: var(--yt-surface);
+      border-radius: 8px;
+      font-size: 12px;
+      border-left: 4px solid var(--yt-success);
+    }
+
+    .status-banner.disabled {
+      border-left-color: #777;
+      color: var(--yt-text-secondary);
+    }
+
+    /* Primary Auto-Sync Button Banner */
+    .sync-banner-btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, rgba(62, 166, 255, 0.2), rgba(62, 166, 255, 0.08));
+      border: 1px solid var(--yt-blue);
+      border-radius: 8px;
+      color: var(--yt-blue);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .sync-banner-btn:hover {
+      background: linear-gradient(135deg, rgba(62, 166, 255, 0.3), rgba(62, 166, 255, 0.15));
+      transform: translateY(-1px);
+    }
+    .sync-banner-btn.syncing {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    /* Quick Action Buttons */
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .quick-btn {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--yt-surface);
+      border: 1px solid var(--yt-border);
+      border-radius: 6px;
+      color: var(--yt-text-primary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .quick-btn:hover {
+      background: var(--yt-surface-hover);
+      border-color: var(--yt-blue);
+      color: var(--yt-blue);
+    }
+
+    /* Sections */
+    .section {
+      margin-top: 14px;
+      background: var(--yt-surface);
+      border-radius: 8px;
+      padding: 12px;
+      border: 1px solid var(--yt-border);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-toggle-btn {
+      font-size: 12px;
+      color: var(--yt-blue);
+      cursor: pointer;
+    }
+
+    .section-body {
+      margin-top: 12px;
+      display: none;
+    }
+
+    .section-body.active {
+      display: block;
+    }
+
+    /* Setting Rows */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .setting-row:last-child {
+      border-bottom: none;
+    }
+
+    .setting-label {
+      font-size: 13px;
+      color: var(--yt-text-primary);
+    }
+
+    .setting-control select,
+    .setting-control input {
+      background: var(--yt-bg);
+      color: var(--yt-text-primary);
+      border: 1px solid var(--yt-border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      outline: none;
+    }
+    .setting-control select:focus,
+    .setting-control input:focus {
+      border-color: var(--yt-blue);
+    }
+
+    /* Playlists List */
+    .playlists-container {
+      max-height: 220px;
+      overflow-y: auto;
+      margin-top: 8px;
+    }
+
+    .playlist-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      background: var(--yt-bg);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      border: 1px solid var(--yt-border);
+      gap: 8px;
+      transition: background 0.2s;
+    }
+
+    .playlist-item:hover {
+      background: var(--yt-surface-hover);
+    }
+
+    .playlist-checkbox {
+      cursor: pointer;
+      accent-color: var(--yt-blue);
+    }
+
+    .playlist-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .playlist-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--yt-text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: 0;
+    }
+
+    .playlist-tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--yt-text-secondary);
+      display: inline-block;
+      margin-top: 2px;
+    }
+
+    .playlist-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .action-icon-btn {
+      background: var(--yt-surface);
+      border: 1px solid var(--yt-border);
+      color: var(--yt-text-secondary);
+      border-radius: 4px;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .action-icon-btn:hover {
+      background: var(--yt-surface-hover);
+      color: var(--yt-text-primary);
+    }
+
+    .action-icon-btn.open:hover {
+      color: var(--yt-blue);
+      border-color: var(--yt-blue);
+    }
+
+    .action-icon-btn.delete:hover {
+      color: #ff4e45;
+      border-color: #ff4e45;
+    }
+
+    /* Add Playlist Form */
+    .add-form {
+      display: none;
+      background: var(--yt-bg);
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 10px;
+      border: 1px solid var(--yt-border);
+    }
+
+    .add-form.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 8px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      color: var(--yt-text-secondary);
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--yt-surface);
+      border: 1px solid var(--yt-border);
+      border-radius: 6px;
+      color: var(--yt-text-primary);
+      font-size: 12px;
+      box-sizing: border-box;
+      outline: none;
+    }
+    .form-input:focus {
+      border-color: var(--yt-blue);
+    }
+
+    .form-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-save {
+      background: var(--yt-blue);
+      color: #0f0f0f;
+    }
+    .btn-save:hover {
+      background: #65b8ff;
+    }
+
+    .btn-cancel {
+      background: var(--yt-surface);
+      color: var(--yt-text-primary);
+      border: 1px solid var(--yt-border);
+    }
+    .btn-cancel:hover {
+      background: var(--yt-surface-hover);
+    }
+
+    /* Export/Import */
+    .backup-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .backup-btn {
+      flex: 1;
+      padding: 6px 10px;
+      background: var(--yt-bg);
+      border: 1px solid var(--yt-border);
+      color: var(--yt-text-primary);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .backup-btn:hover {
+      background: var(--yt-surface-hover);
+      border-color: var(--yt-blue);
+    }
+
+    .shortcuts-list {
+      font-size: 11px;
+      color: var(--yt-text-secondary);
+      line-height: 1.6;
+      margin-top: 8px;
+      padding: 8px;
+      background: var(--yt-bg);
+      border-radius: 6px;
+    }
+
+    .shortcut-key {
+      display: inline-block;
+      padding: 1px 5px;
+      background: var(--yt-surface);
+      border: 1px solid var(--yt-border);
+      border-radius: 4px;
+      color: var(--yt-text-primary);
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">▶</div>
+      <h1 class="brand-title">YouTube Playlist Focus</h1>
+    </div>
+    <label class="switch" title="Toggle Playlist Focus">
+      <input type="checkbox" id="extensionToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <!-- Status Banner -->
+  <div class="status-banner" id="statusBanner">
+    <span id="statusIcon">⚡</span>
+    <span id="statusText">Loading...</span>
+  </div>
+
+  <!-- Auto-Sync All Account Playlists Button -->
+  <button class="sync-banner-btn" id="syncAccountBtn" title="Automatically scan and import all playlists from your YouTube account">
+    🔄 Auto-Sync All Account Playlists
+  </button>
+
+  <!-- Quick Add Presets (Watch Later & Custom) -->
+  <div class="quick-actions">
+    <button class="quick-btn" id="addWatchLaterBtn" title="Add your YouTube Watch Later playlist">
+      🕒 + Watch Later
+    </button>
+    <button class="quick-btn" id="showAddFormBtn" title="Add a custom playlist by URL or ID">
+      ➕ + Custom Playlist
+    </button>
+  </div>
+
+  <!-- Add Playlist Form -->
+  <div class="add-form" id="addForm">
+    <div class="form-group">
+      <label class="form-label" for="playlistUrl">Playlist URL or Playlist ID:</label>
+      <input type="text" class="form-input" id="playlistUrl" placeholder="https://www.youtube.com/playlist?list=PL... or ID">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="playlistCustomName">Custom Display Name (Optional):</label>
+      <input type="text" class="form-input" id="playlistCustomName" placeholder="e.g., Coding Tutorials">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="playlistType">Playlist Persistence:</label>
+      <select class="form-input" id="playlistType">
+        <option value="permanent">Permanent (Kept until deleted)</option>
+        <option value="temporary">Temporary (Cleared on startup)</option>
+      </select>
+    </div>
+    <div class="form-buttons">
+      <button class="btn btn-save" id="savePlaylistBtn">Save Playlist</button>
+      <button class="btn btn-cancel" id="cancelPlaylistBtn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Playlists Section -->
+  <div class="section">
+    <div class="section-header" id="playlistsToggleHeader">
+      <div class="section-title">
+        <span>📺 Active Playlists</span>
+        <span id="playlistCountBadge" style="font-size: 11px; color: var(--yt-text-secondary);">(0)</span>
+      </div>
+      <span class="section-toggle-btn" id="playlistsToggleBtn">Hide</span>
+    </div>
+    <div class="section-body active" id="playlistsBody">
+      <div class="playlists-container" id="playlistsContainer">
+        <!-- Dynamic playlists list -->
+      </div>
+    </div>
+  </div>
+
+  <!-- General Settings Section -->
+  <div class="section">
+    <div class="section-header" id="settingsToggleHeader">
+      <div class="section-title">
+        <span>⚙️ General Preferences</span>
+      </div>
+      <span class="section-toggle-btn" id="settingsToggleBtn">Show</span>
+    </div>
+    <div class="section-body" id="settingsBody">
+      <div class="setting-row">
+        <span class="setting-label">Theme Mode</span>
+        <div class="setting-control">
+          <select id="themeSelect">
+            <option value="auto">Auto (Match YouTube)</option>
+            <option value="dark">Dark Theme</option>
+            <option value="light">Light Theme</option>
+          </select>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Auto-play next playlist video</span>
+        <label class="switch">
+          <input type="checkbox" id="autoplayToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Loop playlist upon completion</span>
+        <label class="switch">
+          <input type="checkbox" id="loopToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Homepage View Layout</span>
+        <div class="setting-control">
+          <select id="viewSelect">
+            <option value="grid">Grid (YouTube Style)</option>
+            <option value="list">List View</option>
+            <option value="compact">Compact Grid</option>
+          </select>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Default Playback Speed</span>
+        <div class="setting-control">
+          <select id="speedSelect">
+            <option value="1">1.0x (Normal)</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2">2.0x</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Backup & Restore -->
+      <div class="backup-row">
+        <button class="backup-btn" id="exportBtn">📤 Export Config</button>
+        <button class="backup-btn" id="importBtn">📥 Import Config</button>
+      </div>
+
+      <!-- Keyboard Shortcuts Info -->
+      <div class="shortcuts-list">
+        <strong>⚡ Keyboard Shortcuts:</strong><br>
+        • <span class="shortcut-key">Alt+N</span> or <span class="shortcut-key">N</span>: Next Video<br>
+        • <span class="shortcut-key">Alt+P</span> or <span class="shortcut-key">P</span>: Previous Video<br>
+        • <span class="shortcut-key">Alt+H</span> or <span class="shortcut-key">H</span>: Go to Homepage<br>
+        • <span class="shortcut-key">Alt+Shift+F</span> or <span class="shortcut-key">/</span>: Focus Search Bar
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
